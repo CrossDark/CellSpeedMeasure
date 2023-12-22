@@ -4,8 +4,8 @@ from skimage.metrics import structural_similarity as ssim
 import matplotlib.pyplot as plt
 
 
-image1 = cv2.imread('/Volumes/home/Experiment/定量/细胞环流/数据/校准数据/speed/0.jpeg')
-image2 = cv2.imread('/Volumes/home/Experiment/定量/细胞环流/数据/校准数据/speed/0.2.jpeg')
+image1 = cv2.imread('/Volumes/home/Experiment/定量/细胞环流/数据/校准数据/speed-plus/0.jpeg')
+image2 = cv2.imread('/Volumes/home/Experiment/定量/细胞环流/数据/校准数据/speed-plus/1.jpeg')
 pixel_diff = cv2.absdiff(image1, image2)
 
 gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)

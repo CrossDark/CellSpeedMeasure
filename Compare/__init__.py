@@ -19,6 +19,10 @@ def rank(filelist: list):
     return sort([[re.findall('\d+', file)[0], file] for file in filelist])
 
 
+def path():
+    pass
+
+
 def compare(folder: str, point=None):
     output = {}
     gentle = 0
@@ -32,8 +36,7 @@ def compare(folder: str, point=None):
                 now = cv2.imread(t[1])
                 cv2.absdiff(now, last)
                 gentle += (1 - (ssim(cv2.cvtColor(now, cv2.COLOR_BGR2GRAY), cv2.cvtColor(last, cv2.COLOR_BGR2GRAY))))
-                print(gentle)
             last = cv2.imread(t[1])
-        output[i] = gentle/len(file_list)
+        output[i] = gentle/(len(file_list)-1)
         gentle = 0
     return output
