@@ -12,6 +12,7 @@ class SQL:
             port=3307
         )
         self.cursor = self.connect.cursor()
+        self.info = None
 
     def tables(self, table: str):
         self.table = table
@@ -28,4 +29,4 @@ class SQL:
         if type(other) is not dict:
             raise TypeError('输入一个字典,不是' + str(type(other)))
         for k, v in other.items():
-            self.cursor.execute("INSERT INTO " + self.table + " (place,value) VALUES ('" + k + "','" + str(v) + "');")
+            self.cursor.execute("INSERT INTO " + self.table + " (place,value,info) VALUES ('" + k + "','" + str(v) + "','" + self.info + "');")
