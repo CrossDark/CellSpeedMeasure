@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from Compare.pro import compair
 
 
 def main():
@@ -16,4 +17,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    print(compair(cv2.imread('/Volumes/home/Experiment/细胞环流/数据/校准数据/speed-plus/0.jpeg'),
+            cv2.imread('/Volumes/home/Experiment/细胞环流/数据/校准数据/speed-plus/1.jpeg'),
+            cv2.imread('/Volumes/home/Experiment/细胞环流/数据/校准数据/black.jpeg')))

@@ -5,7 +5,7 @@ class SQL:
     def __init__(self):
         self.table = None
         self.connect = pymysql.connect(
-            host='192.168.1.2',
+            host='192.168.1.4',
             user='cleverboss',
             password='clever3366',
             database='biology',

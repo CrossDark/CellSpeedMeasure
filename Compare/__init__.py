@@ -34,6 +34,10 @@ def compare(image1, image2):
                        cv2.cvtColor(image_basic, cv2.COLOR_BGR2GRAY))))))
 
 
+def file(folder, point):
+    return rank(glob.glob(os.path.join(folder + '/' + point, '*.bmp')))
+
+
 def main(folder: str, point=None):
     output = {}
     gentle = 0
@@ -41,7 +45,7 @@ def main(folder: str, point=None):
         point = ['a', 'b', 'c', 'd', 'e']
     for i in point:
         last = None
-        file_list = rank(glob.glob(os.path.join(folder + '/' + i, '*')))
+        file_list = file(folder, i)
         for t in file_list:
             if last is not None:
                 now = cv2.imread(t[1])
