@@ -5,7 +5,7 @@ class SQL:
     def __init__(self):
         self.table = None
         self.connect = pymysql.connect(
-            host='192.168.1.4',
+            host='192.168.0.6',
             user='cleverboss',
             password='clever3366',
             database='biology',
@@ -25,8 +25,19 @@ class SQL:
         self.cursor.close()
         self.connect.close()
 
-    def __add__(self, other: dict):
+    def __add__(self, other: list):
+        self.cursor.execute(
+            "INSERT INTO "
+            + self.table
+            + " (variable,value,info) VALUES ('" + other[1] + "','" + str(other[0]) + "','" + other[2] + "');"
+        )
+
+    def __mul__(self, other: dict):
         if type(other) is not dict:
             raise TypeError('输入一个字典,不是' + str(type(other)))
         for k, v in other.items():
-            self.cursor.execute("INSERT INTO " + self.table + " (place,value,info) VALUES ('" + k + "','" + str(v) + "','" + self.info + "');")
+            self.cursor.execute(
+                "INSERT INTO "
+                + self.table
+                + " (variable,value,info) VALUES ('" + k + "','" + str(v) + "','" + self.info + "');"
+            )

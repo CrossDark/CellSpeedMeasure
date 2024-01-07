@@ -5,21 +5,21 @@ from skimage.metrics import structural_similarity as ssim
 import re
 
 
-image_basic =cv2.imread('/Volumes/home/Experiment/定量/细胞环流/程序/image/black-1296*972.jpg')
+image_basic = cv2.imread('/Volumes/home/Experiment/细胞环流/程序/image/black-1296*972.jpg')
 
 
 def sort(filelist: list):
     if len(filelist) < 2:
         return filelist
     else:
-        pivot = filelist[0]
+        pivot = filelist[0]  # len(filelist)/2
         less = [i for i in filelist[1:] if i[0] <= pivot[0]]
         greater = [i for i in filelist[1:] if i[0] > pivot[0]]
         return sort(less) + [pivot] + sort(greater)
 
 
 def rank(filelist: list):
-    return sort([[re.findall('\d+', file)[0], file] for file in filelist])
+    return sort([[re.findall('\d+', file_)[0], file_] for file_ in filelist])
 
 
 def path():
@@ -35,7 +35,7 @@ def compare(image1, image2):
 
 
 def file(folder, point):
-    return rank(glob.glob(os.path.join(folder + '/' + point, '*.bmp')))
+    return rank(glob.glob(os.path.join(folder + '/' + point, '*.jpg')))
 
 
 def main(folder: str, point=None):

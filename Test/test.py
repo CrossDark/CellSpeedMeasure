@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from Compare.pro import compair
+from Compare import pro, rank
 
 
 def main():
@@ -17,6 +17,5 @@ def main():
 
 
 if __name__ == '__main__':
-    print(compair(cv2.imread('/Volumes/home/Experiment/细胞环流/数据/校准数据/speed-plus/0.jpeg'),
-            cv2.imread('/Volumes/home/Experiment/细胞环流/数据/校准数据/speed-plus/1.jpeg'),
-            cv2.imread('/Volumes/home/Experiment/细胞环流/数据/校准数据/black.jpeg')))
+    # print(pro.main('/Volumes/home/Experiment/细胞环流/数据/校准数据/'))
+    pro.ergodic('/Volumes/home/Experiment/细胞环流/数据/正式数据', 'Capture_[0-9]*')
