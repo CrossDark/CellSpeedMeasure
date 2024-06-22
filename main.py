@@ -2,6 +2,7 @@ from itertools import cycle
 from moviepy.editor import ImageSequenceClip
 from ultralytics import YOLO
 from Tools.sql import SQL
+from typing import List, Dict
 import av
 import os
 import time
@@ -14,7 +15,7 @@ class Video:
     def __init__(self, path: str, cache: str):
         self.value = 0
         self.lost = 0
-        self.stream: list[list[list[float, float, float, float]]] = []
+        self.stream: List[Dict[float, List[float]]] = []
         self.image_paths = []
         self.path = path
         self.cache = cache
@@ -40,27 +41,21 @@ class Video:
         lost = 0
         output_ = []
         for i in YOLO(model).track(source=os.path.join(self.cache, 'processed.mp4'), save=True, conf=0.05, iou=0.1):
-            print(i.boxes.id.tolist())
-            print(i.boxes.xyxy.tolist())
-            print('-------------------------')
-            i_xy = []
-            for j in i:
-                j_xy = []
-                for k in i.boxes.xyxy:
-                    j_xy.append([float(item) for item in list(k)])
-                i_xy.append(j_xy)
-            try:  # 这么干会让结果不准确,把两帧当成一帧,导致间隔扩大了两倍,有空修复
-                output_.append(i_xy[0])
-            except IndexError:
-                lost += 1
+            chloroplast = {}
+            # 将ID与坐标转换成一个字典
+            for id_ in i.boxes.id.tolist():
+                for post in i.boxes.xyxy.tolist():
+                    chloroplast[id_] = post
+            output_.append(chloroplast)
+        print(output_)
         self.stream = output_
         self.lost = lost
 
     def output(self, path: str):
         with open(path, 'w', encoding='utf-8') as file:
             for flame in self.stream:
-                for block in flame:
-                    file.write(str(block[0]) + ' ' + str(block[1]) + ' ' + str(block[2]) + ' ' + str(block[3]) + '  ')
+                for id_, block in flame.keys():
+                    file.write(str(id_) + ' ' + str(block[0]) + ' ' + str(block[1]) + ' ' + str(block[2]) + ' ' + str(block[3]) + '  ')
                 file.write('\n')
 
     def clean(self):
