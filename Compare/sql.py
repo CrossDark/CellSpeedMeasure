@@ -2,17 +2,18 @@ import pymysql
 
 
 class SQL:
-    def __init__(self):
+    def __init__(self, host='192.168.1.4', user='cleverboss', password='clever3366', database='biology', port=3307):
         self.table = None
         self.connect = pymysql.connect(
-            host='192.168.0.6',
-            user='cleverboss',
-            password='clever3366',
-            database='biology',
-            port=3307
+            host=host,
+            user=user,
+            password=password,
+            database=database,
+            port=port
         )
         self.cursor = self.connect.cursor()
         self.info = None
+        self.keys = 'value,light,number,part,wrong'
 
     def tables(self, table: str):
         self.table = table
@@ -26,10 +27,13 @@ class SQL:
         self.connect.close()
 
     def __add__(self, other: list):
+        print(other)
         self.cursor.execute(
             "INSERT INTO "
             + self.table
-            + " (variable,value,info) VALUES ('" + other[1] + "','" + str(other[0]) + "','" + other[2] + "');"
+            + " (" + self.keys + ") VALUES ('" +
+            str(other[0]) + "','" + str(other[1]) + "','" + str(other[2]) + "','" + str(other[3]) + "','" + str(other[4])
+            + "');"
         )
 
     def __mul__(self, other: dict):
@@ -39,5 +43,5 @@ class SQL:
             self.cursor.execute(
                 "INSERT INTO "
                 + self.table
-                + " (variable,value,info) VALUES ('" + k + "','" + str(v) + "','" + self.info + "');"
+                + " (value,light) VALUES ('" + str(v) + "','" + self.info + "');"
             )
