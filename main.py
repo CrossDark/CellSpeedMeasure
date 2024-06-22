@@ -1,7 +1,7 @@
 from itertools import cycle
 from moviepy.editor import ImageSequenceClip
 from ultralytics import YOLO
-from Compare.sql import SQL
+from Tools.sql import SQL
 import av
 import os
 import time
@@ -40,6 +40,9 @@ class Video:
         lost = 0
         output_ = []
         for i in YOLO(model).track(source=os.path.join(self.cache, 'processed.mp4'), save=True, conf=0.05, iou=0.1):
+            print(i.boxes.id.tolist())
+            print(i.boxes.xyxy.tolist())
+            print('-------------------------')
             i_xy = []
             for j in i:
                 j_xy = []
@@ -73,10 +76,10 @@ class Video:
     @staticmethod
     def analise(datas, max_distance: int = 10):
         sub = 0
-        last = None
+        last = []
         for i in datas:  # 逐帧遍历视频(数据)
             if (last is None) or (i is None):  # 如果两帧全没识别到
-                return 0
+                continue
             distance = []  # distance中取最小值,可以认为是一个叶绿体在两帧之间的移动距离
             for post1 in last:  # 遍历前一帧的所有叶绿体
                 distances = []  # 帧1的一个叶绿体于帧2中所有叶绿体的距离,其中最小的可以认为是叶绿体在两帧中运动的距离
@@ -105,11 +108,12 @@ class Video:
 
 
 def main():
-    video = Video('/Volumes/home/Experiment/细胞环流/数据/实验数据/光照强度/NO-6/2000lux-3.mp4', 'cache/')
+    video = Video('/Volumes/home/Experiment/细胞环流/数据/实验数据/光照强度/NO-6/2000lux-5.mp4', 'cache/')
     video.split_flame(10)
     video.generate_video()
     video.yolo('/Volumes/home/Project/YoloV8/model/不错.pt')
     video.output('/Users/crossdark/Downloads/result.txt')
+    video.database(20)
     video.clean()
 
 
