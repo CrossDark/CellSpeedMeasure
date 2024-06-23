@@ -67,7 +67,6 @@ class Video:
     def output(self, path: str):
         with open(path, 'w', encoding='utf-8') as file:
             for flame in self.stream:
-                print(flame)
                 for id_, block in flame.items():
                     file.write(f'{id_}:{block[0]}-{block[1]}-{block[2]}-{block[3]}  ')
                 file.write('\n')
@@ -83,10 +82,11 @@ class Video:
                 print(f'Error deleting {filename}: {e}')
 
     @staticmethod
-    def analise(datas: Datas, interval=1, reliable_num=10) -> Tuple[float, float, bool]:
+    def analise(datas: Datas, interval=1, reliable_num=10) -> Tuple[float, float, bool, int]:
         distances = []  # 存储每帧的平均距离
         standard_deviation = []  # 存储每帧方差
         reliable = True  # 结果是否可靠
+        lost = 0
         for index, value in enumerate(zip(datas, datas[1:])):  # 逐帧遍历视频(数据)
             if index % interval != 0:  # 不是要处理的帧,跳过
                 continue
@@ -98,14 +98,12 @@ class Video:
                         math.sqrt((last_post[0] - now[last_id][0]) ** 2 + (last_post[1] - now[last_id][1]) ** 2)
                     )  # 计算两个叶绿体间的距离
                 except KeyError:  # 上一帧的叶绿体在下一帧中没有识别到
-                    pass
+                    lost += 1
             if len(distance) <= reliable_num:  # 结果不可靠,发出提示
                 reliable = False
             distances.append(sum(distance) / len(distance))
             standard_deviation.append(numpy.std(numpy.array(distance)))
-        if not reliable:
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        return sum(distances) / len(datas), numpy.std(numpy.array(standard_deviation)), reliable
+        return sum(distances) / len(datas), numpy.std(numpy.array(standard_deviation)), reliable, lost
 
     def database(self, spread: int, interval: int, tables):
         xy = self.stream
@@ -117,18 +115,31 @@ class Video:
                 db.tables(tables)
                 db.keys = self.db[tables]
                 info = os.path.splitext(os.path.basename(self.path))[0].split('-')
-                db + ([str(self.analise(k, interval)[0])]
+                result = self.analise(k, interval)
+                db + ([str(result[0])]
                       + list(info[:2] if len(info) == 2 else info[:1] + [0])
-                      + [index + 1, self.lost])
+                      + [index + 1, result[3]])
+
+    def load(self, file):
+        with open(file, 'r') as datas:
+            for flame in datas:
+                posts = {}
+                for post in flame.split('  '):
+                    post_ = post.split(':')
+                    if post_[0] == '\n':
+                        continue
+                    posts[int(post_[0])] = tuple([float(i) for i in post_[1].split('-')])
+                self.stream.append(posts)
 
 
 def main(path):
     video = Video(path, 'cache/')
-    video.split_flame(1)
+    """video.split_flame(1)
     video.generate_video()
     video.yolo('/Volumes/home/Project/YoloV8/model/不错.pt')
-    video.output('/Users/crossdark/Downloads/result.txt')
-    video.database(20, 10, 'LightIntensity')
+    video.output('/Users/crossdark/Downloads/result.txt')"""
+    video.load('/Users/crossdark/Downloads/result.txt')
+    video.database(10, 10, 'LightIntensity')
     video.clean()
 
 
@@ -136,7 +147,7 @@ if __name__ == '__main__':
     # 开始计时
     start_time = time.perf_counter_ns()
     # 主函数
-    main('/Volumes/home/Experiment/细胞环流/数据/实验数据/光照强度/NO-6/2000lux-5.mp4')
+    main('/Volumes/home/Experiment/细胞环流/数据/实验数据/光照强度/NO-6/2000lux-6.mp4')
     # 停止计时
     end_time = time.perf_counter_ns()
     # 输出用时
