@@ -2,7 +2,8 @@ from itertools import cycle
 from moviepy.editor import ImageSequenceClip
 from ultralytics import YOLO
 from Tools.sql import SQL
-from typing import List, Dict
+from typing import List, Dict, Tuple
+import numpy
 import av
 import os
 import time
@@ -12,16 +13,26 @@ import copy
 
 
 class Video:
+    Datas = List[Dict[int, Tuple[float, float, float, float]]]
+
     def __init__(self, path: str, cache: str):
         self.value = 0
         self.lost = 0
-        self.stream: List[Dict[float, List[float]]] = []
+        self.stream: Video.Datas = []
         self.image_paths = []
         self.path = path
         self.cache = cache
         self.video = av.open(path)
+        self.final: str = ''
+        self.db: dict = {
+            'LightTemperature': 'value,temperature,light,part,wrong',
+            'LightIntensity': 'value,light,number,part,wrong'
+        }
 
     def split_flame(self, sampling_rate: int = 1):  # 将视频拆分成帧(可设置间隔)
+        if sampling_rate == 1:
+            self.final = self.path
+            return
         flames = self.video.decode(self.video.streams.video[0])
         # 逐帧遍历视频
         for index, frame in enumerate(flames):
@@ -32,30 +43,33 @@ class Video:
                 image.save(image_path)
 
     def generate_video(self, fps: int = 25):
+        if self.final == self.path:  # 说明视频无需处理
+            return
         # 通过图片生成视频
         clip = ImageSequenceClip(self.image_paths, fps=fps)
         # 写入视频文件
-        clip.write_videofile(os.path.join(self.cache, 'processed.mp4'), codec='libx264')  # 写入视频文件，指定编码器为libx264
+        self.final = os.path.join(self.cache, 'processed.mp4')
+        clip.write_videofile(self.final, codec='libx264')  # 写入视频文件，指定编码器为libx264
 
     def yolo(self, model: str):
         lost = 0
         output_ = []
-        for i in YOLO(model).track(source=os.path.join(self.cache, 'processed.mp4'), save=True, conf=0.05, iou=0.1):
+        for i in YOLO(model).track(source=self.final, save=True, conf=0.05, iou=0.1):
             chloroplast = {}
             # 将ID与坐标转换成一个字典
             for id_ in i.boxes.id.tolist():
                 for post in i.boxes.xyxy.tolist():
-                    chloroplast[id_] = post
+                    chloroplast[int(id_)] = tuple(post)
             output_.append(chloroplast)
-        print(output_)
         self.stream = output_
         self.lost = lost
 
     def output(self, path: str):
         with open(path, 'w', encoding='utf-8') as file:
             for flame in self.stream:
-                for id_, block in flame.keys():
-                    file.write(str(id_) + ' ' + str(block[0]) + ' ' + str(block[1]) + ' ' + str(block[2]) + ' ' + str(block[3]) + '  ')
+                print(flame)
+                for id_, block in flame.items():
+                    file.write(f'{id_}:{block[0]}-{block[1]}-{block[2]}-{block[3]}  ')
                 file.write('\n')
 
     def clean(self):
@@ -69,46 +83,52 @@ class Video:
                 print(f'Error deleting {filename}: {e}')
 
     @staticmethod
-    def analise(datas, max_distance: int = 10):
-        sub = 0
-        last = []
-        for i in datas:  # 逐帧遍历视频(数据)
-            if (last is None) or (i is None):  # 如果两帧全没识别到
+    def analise(datas: Datas, interval=1, reliable_num=10) -> Tuple[float, float, bool]:
+        distances = []  # 存储每帧的平均距离
+        standard_deviation = []  # 存储每帧方差
+        reliable = True  # 结果是否可靠
+        for index, value in enumerate(zip(datas, datas[1:])):  # 逐帧遍历视频(数据)
+            if index % interval != 0:  # 不是要处理的帧,跳过
                 continue
-            distance = []  # distance中取最小值,可以认为是一个叶绿体在两帧之间的移动距离
-            for post1 in last:  # 遍历前一帧的所有叶绿体
-                distances = []  # 帧1的一个叶绿体于帧2中所有叶绿体的距离,其中最小的可以认为是叶绿体在两帧中运动的距离
-                for post2 in i:  # 遍历后一帧的所有叶绿体
-                    distances.append(math.sqrt((post1[0] - post2[0]) ** 2 + (post1[1] - post2[1]) ** 2))  # 计算两个叶绿体间的距离
-                if min(distances) <= max_distance:  # 说明没跟丢
-                    distance.append(min(distances))
-            try:
-                sub += sum(distance) / len(distance)
-            except ZeroDivisionError:
-                sub += 0
-            last = i
-        return sub / len(datas)
+            last, now = value
+            distance = []  # 两帧之间每个叶绿体的移动距离
+            for last_id, last_post in last.items():  # 遍历上一帧的所有叶绿体,通过ID对应到下一帧
+                try:
+                    distance.append(
+                        math.sqrt((last_post[0] - now[last_id][0]) ** 2 + (last_post[1] - now[last_id][1]) ** 2)
+                    )  # 计算两个叶绿体间的距离
+                except KeyError:  # 上一帧的叶绿体在下一帧中没有识别到
+                    pass
+            if len(distance) <= reliable_num:  # 结果不可靠,发出提示
+                reliable = False
+            distances.append(sum(distance) / len(distance))
+            standard_deviation.append(numpy.std(numpy.array(distance)))
+        if not reliable:
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        return sum(distances) / len(datas), numpy.std(numpy.array(standard_deviation)), reliable
 
-    def database(self, spread: int):
+    def database(self, spread: int, interval: int, tables):
         xy = self.stream
         part = len(self.stream) / spread
         part1 = cycle([math.floor(part), math.ceil(part)])
         part2 = copy.deepcopy(part1)
         for index, k in enumerate([xy[i:i + next(part2)] for i in range(0, len(xy), next(part1))]):
             with SQL() as db:
-                db.tables('LightTemperature')
-                db.keys = 'value,temperature,light,part,wrong'
+                db.tables(tables)
+                db.keys = self.db[tables]
                 info = os.path.splitext(os.path.basename(self.path))[0].split('-')
-                db + ([str(self.analise(k))] + list(info[:2] if len(info) == 2 else info[:1] + [0]) + [index + 1, self.lost])
+                db + ([str(self.analise(k, interval)[0])]
+                      + list(info[:2] if len(info) == 2 else info[:1] + [0])
+                      + [index + 1, self.lost])
 
 
-def main():
-    video = Video('/Volumes/home/Experiment/细胞环流/数据/实验数据/光照强度/NO-6/2000lux-5.mp4', 'cache/')
-    video.split_flame(10)
+def main(path):
+    video = Video(path, 'cache/')
+    video.split_flame(1)
     video.generate_video()
     video.yolo('/Volumes/home/Project/YoloV8/model/不错.pt')
     video.output('/Users/crossdark/Downloads/result.txt')
-    video.database(20)
+    video.database(20, 10, 'LightIntensity')
     video.clean()
 
 
@@ -116,7 +136,7 @@ if __name__ == '__main__':
     # 开始计时
     start_time = time.perf_counter_ns()
     # 主函数
-    main()
+    main('/Volumes/home/Experiment/细胞环流/数据/实验数据/光照强度/NO-6/2000lux-5.mp4')
     # 停止计时
     end_time = time.perf_counter_ns()
     # 输出用时

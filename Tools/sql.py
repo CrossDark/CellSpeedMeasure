@@ -38,10 +38,8 @@ class SQL:
 
     def __mul__(self, other: dict):
         if type(other) is not dict:
-            raise TypeError('输入一个字典,不是' + str(type(other)))
+            raise TypeError(f'输入一个字典,不是{type(other)}')
         for k, v in other.items():
             self.cursor.execute(
-                "INSERT INTO "
-                + self.table
-                + " (value,light) VALUES ('" + str(v) + "','" + self.info + "');"
+                f"INSERT INTO {self.table} (value,light) VALUES ('{v}','{self.info}');"
             )
