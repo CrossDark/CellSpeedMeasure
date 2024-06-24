@@ -1,8 +1,8 @@
 from itertools import cycle
 from moviepy.editor import ImageSequenceClip
 from ultralytics import YOLO
-from tools import SQL
-from typing import List, Dict, Tuple
+from CDBio.tools import SQL
+from typing import List, Dict, Tuple, Union
 import numpy
 import av
 import os
@@ -132,3 +132,22 @@ class Video:
                         continue
                     posts[int(post_[0])] = tuple([float(i) for i in post_[1].split('-')])
                 self.stream.append(posts)
+
+    @classmethod
+    def exec(cls, path, operation: Dict[str, Union[str, Dict[str, Union[int, str]], int]]):
+        video = cls(path, 'cache/')
+        if '预处理' in operation:
+            video.split_flame(operation['预处理']['间隔'])
+            video.generate_video()
+            video.clean()
+        video.yolo(operation['模型'])
+        if '输出' in operation:
+            video.output(operation['输出'])
+        if '加载' in operation:
+            video.load(operation['加载'])
+        if '数据库' in operation:
+            video.database(operation['']['分段'], operation['']['分析间隔'], operation['']['表格'])
+
+    @classmethod
+    def yaml(cls):
+        pass
